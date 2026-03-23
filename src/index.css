@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg: #F8F9FA;
+  --card: #FFFFFF;
+  --border: #E9ECEF;
+  --text: #212529;
+  --text-muted: #6C757D;
+  --chart-grid: #E9ECEF;
+  --chart-text: #6C757D;
+}
+
+.dark {
+  --bg: #0B0B0F;
+  --card: #14141A;
+  --border: #2A2A33;
+  --text: #FFFFFF;
+  --text-muted: #9CA3AF;
+  --chart-grid: #2A2A33;
+  --chart-text: #9CA3AF;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --color-primary: #E10600;
+  --color-primary-hover: #FF3B30;
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-text: var(--chart-text);
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text font-sans transition-colors duration-300;
+  }
+}
+
+.glass {
+  @apply bg-card/80 backdrop-blur-md border border-border rounded-xl;
+}
+
+.btn-primary {
+  @apply bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg font-medium transition-all active:scale-95;
+}
+
+.input-field {
+  @apply bg-card border border-border rounded-lg px-4 py-2 focus:outline-none focus:border-primary transition-colors text-text;
+}
+

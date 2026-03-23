@@ -1,0 +1,21 @@
+{
+  "name": "ForgeOS Habit Tracker",
+  "short_name": "ForgeOS",
+  "description": "A powerful habit tracker and study planner.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#E10600",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/forgeos/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/forgeos/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User settings and profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "theme": { "type": "string", "enum": ["dark", "light"] },
+        "goals": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Skill": {
+      "title": "Skill Tracker",
+      "description": "A skill or course being tracked",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "progress": { "type": "number" },
+        "subSkills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "progress": { "type": "number" }
+            }
+          }
+        },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Task": {
+      "title": "Task/Schedule",
+      "description": "Daily or due-date based task",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["daily", "due-date"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed"] },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "completed": { "type": "boolean" }
+            }
+          }
+        },
+        "skillId": { "type": "string" }
+      },
+      "required": ["userId", "title", "type"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Study notes for a specific topic or sub-topic",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "topic": { "type": "string" },
+        "links": { "type": "array", "items": { "type": "string" } },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "skillId": { "type": "string" },
+        "topicId": { "type": "string" },
+        "subTopicId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Daily habit tracking (fitness, water, etc.)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "streak": { "type": "number" },
+        "history": { "type": "object" },
+        "lastCompleted": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Reflection": {
+      "title": "Reflection",
+      "description": "Daily journal and reflection",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "mood": { "type": "string" },
+        "lessonsLearned": { "type": "string" },
+        "summary": { "type": "string" }
+      },
+      "required": ["userId", "date"]
+    },
+    "Topic": {
+      "title": "Skill Topic",
+      "description": "A specific topic within a skill",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "skillId": { "type": "string" },
+        "title": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "completed"] }
+      },
+      "required": ["userId", "skillId", "title"]
+    },
+    "SubTopic": {
+      "title": "Skill Sub-Topic",
+      "description": "A specific sub-topic within a topic",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topicId": { "type": "string" },
+        "skillId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] }
+      },
+      "required": ["userId", "topicId", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/skills/{skillId}": { "schema": "Skill", "description": "Skill tracking data" },
+    "/topics/{topicId}": { "schema": "Topic", "description": "Topics within a skill" },
+    "/subtopics/{subTopicId}": { "schema": "SubTopic", "description": "Sub-topics within a topic" },
+    "/tasks/{taskId}": { "schema": "Task", "description": "User tasks and schedules" },
+    "/notes/{noteId}": { "schema": "Note", "description": "User study notes" },
+    "/habits/{habitId}": { "schema": "Habit", "description": "User habits" },
+    "/reflections/{reflectionId}": { "schema": "Reflection", "description": "User daily reflections" }
+  }
+}

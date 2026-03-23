@@ -1,0 +1,8 @@
+{
+  "name": "ForgeOS",
+  "description": "A personal growth operating system for developers. Track studies, fitness, habits, and skills with a modern black and red interface.",
+  "requestFramePermissions": [
+    "notifications",
+    "geolocation"
+  ]
+}
