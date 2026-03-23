@@ -11,7 +11,8 @@ import {
   updateDoc, 
   doc, 
   deleteDoc, 
-  orderBy 
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -27,10 +28,13 @@ import {
   X,
   ChevronRight,
   ChevronDown,
-  Video
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
+import ConfirmDialog from './ConfirmDialog';
+import LinkDialog from './LinkDialog';
 
 interface Topic {
   id: string;
@@ -89,7 +93,8 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
   const [newSubTopicTitle, setNewSubTopicTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [noteLinks, setNoteLinks] = useState<string[]>([]);
-  const [newLink, setNewLink] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'topic' | 'subtopic'; title: string } | null>(null);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !skill.id) return;
@@ -275,24 +280,43 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
 
   const deleteItem = async (id: string, type: 'topic' | 'subtopic') => {
     const collectionName = type === 'topic' ? 'topics' : 'subtopics';
+
+    const noteField = type === 'topic' ? 'topicId' : 'subTopicId';
+    const relatedNotesSnapshot = user
+      ? await getDocs(query(collection(db, 'notes'), where(noteField, '==', id), where('userId', '==', user.uid)))
+      : null;
+
     await deleteDoc(doc(db, collectionName, id));
-    
+
+    if (relatedNotesSnapshot) {
+      await Promise.all(relatedNotesSnapshot.docs.map(noteDoc => deleteDoc(noteDoc.ref)));
+    }
+
     if (type === 'topic') {
       const subs = subTopics.filter(s => s.topicId === id);
       for (const s of subs) {
+        const subNotesSnapshot = user
+          ? await getDocs(query(collection(db, 'notes'), where('subTopicId', '==', s.id), where('userId', '==', user.uid)))
+          : null;
         await deleteDoc(doc(db, 'subtopics', s.id));
+        if (subNotesSnapshot) {
+          await Promise.all(subNotesSnapshot.docs.map(noteDoc => deleteDoc(noteDoc.ref)));
+        }
       }
       if (selectedTopicId === id) setSelectedTopicId(null);
+      setSelectedSubTopicId(null);
     } else {
       if (selectedSubTopicId === id) setSelectedSubTopicId(null);
     }
+
+    setDeleteTarget(null);
   };
 
-  const addLink = () => {
-    if (newLink && !noteLinks.includes(newLink)) {
-      setNoteLinks([...noteLinks, newLink]);
-      setNewLink('');
+  const addLinkFromDialog = (link: string) => {
+    if (!noteLinks.includes(link)) {
+      setNoteLinks([...noteLinks, link]);
     }
+    setIsLinkDialogOpen(false);
   };
 
   const removeLink = (linkToRemove: string) => {
@@ -342,26 +366,29 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
             placeholder="Write your notes here..."
           />
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                placeholder="Add a link..."
-                value={newLink}
-                onChange={(e) => setNewLink(e.target.value)}
-                className="flex-1 input-field py-1 text-xs"
-              />
-              <button 
-                onClick={addLink}
-                className="p-1.5 bg-primary/10 text-primary rounded hover:bg-primary/20"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setIsLinkDialogOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm text-primary transition-colors hover:bg-card/50"
+            >
+              <Plus size={16} />
+              Add Resource Link
+            </button>
+            <div className="space-y-2">
               {noteLinks.map((link, i) => (
-                <div key={i} className="flex items-center gap-2 bg-card/50 px-2 py-1 rounded text-[10px] border border-border">
-                  <span className="truncate max-w-[120px]">{link}</span>
-                  <button onClick={() => removeLink(link)} className="text-text-muted hover:text-red-400"><X size={10} /></button>
+                <div key={i} className="flex items-center gap-3 rounded-xl border border-border bg-card/40 px-3 py-3 text-sm">
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-text transition-colors hover:text-primary"
+                  >
+                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      {link.includes('youtube.com') || link.includes('youtu.be') ? <Video size={16} /> : <LinkIcon size={16} />}
+                    </div>
+                    <span className="truncate">{link}</span>
+                    <ExternalLink size={14} className="shrink-0" />
+                  </a>
+                  <button onClick={() => removeLink(link)} className="text-text-muted hover:text-red-400"><X size={12} /></button>
                 </div>
               ))}
             </div>
@@ -559,7 +586,7 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteItem(topic.id, 'topic');
+                      setDeleteTarget({ id: topic.id, type: 'topic', title: topic.title });
                     }}
                     className="p-1.5 text-text-muted hover:text-red-500 transition-colors lg:opacity-0 lg:group-hover:opacity-100"
                   >
@@ -613,7 +640,7 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deleteItem(sub.id, 'subtopic');
+                                setDeleteTarget({ id: sub.id, type: 'subtopic', title: sub.title });
                               }}
                               className="lg:opacity-0 lg:group-hover:opacity-100 text-text-muted hover:text-red-400 transition-colors"
                             >
@@ -674,6 +701,18 @@ export default function SkillDetail({ skill, onBack }: SkillDetailProps) {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={`Delete ${deleteTarget?.type === 'topic' ? 'topic' : 'sub-topic'}?`}
+        message={`"${deleteTarget?.title || 'This item'}" and its related notes will be removed.`}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteItem(deleteTarget.id, deleteTarget.type)}
+      />
+      <LinkDialog
+        open={isLinkDialogOpen}
+        onCancel={() => setIsLinkDialogOpen(false)}
+        onSubmit={addLinkFromDialog}
+      />
     </div>
   );
 }

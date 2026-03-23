@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, orderBy } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
+import ConfirmDialog from './ConfirmDialog';
 import { 
   Plus, 
   Calendar as CalendarIcon, 
@@ -23,6 +24,7 @@ export default function Planner() {
   const [view, setView] = useState<'today' | 'daily' | 'weekly' | 'due-date'>('today');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({
     title: '',
     type: 'daily',
@@ -131,6 +133,7 @@ export default function Planner() {
 
   const deleteTask = async (id: string) => {
     await deleteDoc(doc(db, 'tasks', id));
+    setDeleteTargetId(null);
   };
 
   const isTaskCompletedToday = (task: any) => {
@@ -294,7 +297,7 @@ export default function Planner() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => deleteTask(task.id)}
+                  onClick={() => setDeleteTargetId(task.id)}
                   className="opacity-0 group-hover:opacity-100 p-2 text-text-muted hover:text-red-400 transition-all"
                 >
                   <Trash2 size={18} />
@@ -433,6 +436,13 @@ export default function Planner() {
           </div>
         )}
       </AnimatePresence>
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        title="Delete task?"
+        message="This task will be removed permanently."
+        onCancel={() => setDeleteTargetId(null)}
+        onConfirm={() => deleteTargetId && deleteTask(deleteTargetId)}
+      />
     </div>
   );
 }

@@ -4,8 +4,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc, orderBy } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, FileText, Link as LinkIcon, Video, Trash2, Edit3, X } from 'lucide-react';
+import { Plus, Search, FileText, Link as LinkIcon, Video, Trash2, Edit3, X, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import ConfirmDialog from './ConfirmDialog';
+import LinkDialog from './LinkDialog';
 
 export default function Notes() {
   const { user } = useAuth();
@@ -14,6 +16,8 @@ export default function Notes() {
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState({
     title: '',
     content: '',
@@ -25,7 +29,13 @@ export default function Notes() {
     if (!user) return;
     const q = query(collection(db, 'notes'), where('userId', '==', user.uid), orderBy('updatedAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
-      setNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const nextNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotes(nextNotes);
+      setSelectedNote(prevSelected => {
+        if (nextNotes.length === 0) return null;
+        if (!prevSelected) return nextNotes[0];
+        return nextNotes.find(note => note.id === prevSelected.id) || nextNotes[0];
+      });
     });
   }, [user]);
 
@@ -48,20 +58,25 @@ export default function Notes() {
   };
 
   const addLink = () => {
-    const link = prompt('Enter resource URL:');
-    if (link) {
+    setIsLinkDialogOpen(true);
+  };
+
+  const handleAddLink = (link: string) => {
+    if (!newNote.links.includes(link)) {
       setNewNote(prev => ({ ...prev, links: [...(prev.links || []), link] }));
     }
+    setIsLinkDialogOpen(false);
   };
 
   const deleteNote = async (id: string) => {
     await deleteDoc(doc(db, 'notes', id));
     if (selectedNote?.id === id) setSelectedNote(null);
+    setDeleteTarget(null);
   };
 
   const filteredNotes = notes.filter(n => 
-    n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    n.topic.toLowerCase().includes(searchQuery.toLowerCase())
+    (n.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (n.topic || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -159,11 +174,27 @@ export default function Notes() {
                   onChange={e => setNewNote({...newNote, content: e.target.value})}
                   className="flex-1 bg-transparent outline-none resize-none font-mono text-sm"
                 />
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {newNote.links?.map((link: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2 bg-card/50 px-2 py-1 rounded text-xs border border-border">
-                      <span className="truncate max-w-[150px]">{link}</span>
-                      <button onClick={() => setNewNote(prev => ({ ...prev, links: prev.links.filter((_, idx) => idx !== i) }))} className="text-text-muted hover:text-red-400"><X size={12} /></button>
+                    <div key={i} className="flex items-center gap-3 rounded-xl border border-border bg-card/40 px-3 py-3 text-sm">
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-w-0 flex-1 items-center gap-3 text-text transition-colors hover:text-primary"
+                      >
+                        <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                          {link.includes('youtube.com') || link.includes('youtu.be') ? <Video size={16} /> : <LinkIcon size={16} />}
+                        </div>
+                        <span className="truncate">{link}</span>
+                        <ExternalLink size={14} className="shrink-0" />
+                      </a>
+                      <button
+                        onClick={() => setNewNote(prev => ({ ...prev, links: prev.links.filter((_, idx) => idx !== i) }))}
+                        className="text-text-muted transition-colors hover:text-red-400"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -206,7 +237,12 @@ export default function Notes() {
                   <div className="flex gap-2">
                     <button 
                       onClick={() => {
-                        setNewNote(selectedNote);
+                        setNewNote({
+                          title: selectedNote.title || '',
+                          content: selectedNote.content || '',
+                          topic: selectedNote.topic || '',
+                          links: selectedNote.links || []
+                        });
                         setIsEditing(true);
                       }}
                       className="p-2 hover:bg-card/50 rounded-lg text-text-muted hover:text-text"
@@ -214,7 +250,7 @@ export default function Notes() {
                       <Edit3 size={20} />
                     </button>
                     <button 
-                      onClick={() => deleteNote(selectedNote.id)}
+                      onClick={() => setDeleteTarget(selectedNote)}
                       className="p-2 hover:bg-card/50 rounded-lg text-text-muted hover:text-red-400"
                     >
                       <Trash2 size={20} />
@@ -258,6 +294,18 @@ export default function Notes() {
           </AnimatePresence>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete note?"
+        message={`"${deleteTarget?.title || 'This note'}" will be removed permanently.`}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteNote(deleteTarget.id)}
+      />
+      <LinkDialog
+        open={isLinkDialogOpen}
+        onCancel={() => setIsLinkDialogOpen(false)}
+        onSubmit={handleAddLink}
+      />
     </div>
   );
 }

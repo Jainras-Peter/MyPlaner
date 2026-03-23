@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
+import ConfirmDialog from './ConfirmDialog';
 import { 
   Plus, 
   Flame, 
@@ -61,6 +62,7 @@ export default function Habits() {
   const [newHabit, setNewHabit] = useState({ name: '', icon: 'Activity' });
   const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
   const [viewDate, setViewDate] = useState(new Date());
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -170,9 +172,8 @@ export default function Habits() {
   };
 
   const handleDeleteHabit = async (id: string) => {
-    if (confirm('Are you sure you want to delete this habit?')) {
-      await deleteDoc(doc(db, 'habits', id));
-    }
+    await deleteDoc(doc(db, 'habits', id));
+    setDeleteTarget(null);
   };
 
   const icons = { 
@@ -386,7 +387,7 @@ export default function Habits() {
               className="glass p-6 flex items-center gap-4 group relative"
             >
               <button 
-                onClick={() => handleDeleteHabit(habit.id)}
+                onClick={() => setDeleteTarget(habit)}
                 className="absolute top-2 right-2 p-1.5 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
               >
                 <Trash2 size={14} />
@@ -484,6 +485,13 @@ export default function Habits() {
           </div>
         )}
       </AnimatePresence>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete habit?"
+        message={`"${deleteTarget?.name || 'This habit'}" and its tracking history will be removed.`}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDeleteHabit(deleteTarget.id)}
+      />
     </div>
   );
 }
@@ -491,5 +499,3 @@ export default function Habits() {
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
 }
-
-
